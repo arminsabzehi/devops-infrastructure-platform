@@ -11,6 +11,21 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL })
 app.use(express.json())
 
 const schemaSql = `
+CREATE TABLE IF NOT EXISTS products (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(180) NOT NULL,
+  slug VARCHAR(180) UNIQUE NOT NULL,
+  category VARCHAR(80) NOT NULL,
+  price BIGINT NOT NULL DEFAULT 0 CHECK (price >= 0),
+  old_price BIGINT,
+  image TEXT NOT NULL DEFAULT '',
+  badge VARCHAR(60) NOT NULL DEFAULT '',
+  stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
+  rating NUMERIC(2,1) NOT NULL DEFAULT 4.5,
+  review_count INTEGER NOT NULL DEFAULT 0,
+  description TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 CREATE TABLE IF NOT EXISTS users (
   id BIGSERIAL PRIMARY KEY,
   name TEXT NOT NULL,
@@ -34,7 +49,7 @@ CREATE TABLE IF NOT EXISTS carts (
 CREATE TABLE IF NOT EXISTS cart_items (
   id BIGSERIAL PRIMARY KEY,
   cart_id BIGINT NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
-  product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   UNIQUE(cart_id, product_id)
 );
@@ -48,7 +63,7 @@ CREATE TABLE IF NOT EXISTS orders (
 CREATE TABLE IF NOT EXISTS order_items (
   id BIGSERIAL PRIMARY KEY,
   order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-  product_id BIGINT NOT NULL REFERENCES products(id),
+  product_id INTEGER NOT NULL REFERENCES products(id),
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   unit_price NUMERIC(14,2) NOT NULL
 );
