@@ -1,50 +1,223 @@
 services:
   gateway:
-    image: nginx:alpine
+    image: nginx:1.29-alpine
     container_name: infra-gateway
     ports:
-      - "8082:80"
+      - "8083:80"
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
     depends_on:
       - frontend
       - shop
       - about
+      - account
+      - orders
+      - admin
 
   frontend:
+    image: novamarket/frontend:1.1.0
     build: ./app
     container_name: infra-frontend
-    expose:
-      - "80"
-    depends_on:
-      - backend
+    expose: ["80"]
+    restart: unless-stopped
+    depends_on: [catalog]
 
   shop:
+    image: novamarket/shop:1.1.0
     build: ./pages/shop
     container_name: infra-shop
-    expose:
-      - "80"
+    expose: ["80"]
+    restart: unless-stopped
+    depends_on: [catalog, cart]
 
   about:
+    image: novamarket/about:1.1.0
     build: ./pages/about
     container_name: infra-about
-    expose:
-      - "80"
+    expose: ["80"]
+    restart: unless-stopped
 
-  backend:
-    build: ./backend
-    container_name: infra-backend
+  account:
+    image: novamarket/account:1.0.0
+    build: ./pages/account
+    container_name: infra-account
+    expose: ["80"]
+    restart: unless-stopped
+    depends_on: [user]
+
+  orders:
+    image: novamarket/orders:1.0.0
+    build: ./pages/orders
+    container_name: infra-orders
+    expose: ["80"]
+    restart: unless-stopped
+    depends_on: [order-service, user]
+
+  admin:
+    image: novamarket/admin:1.0.0
+    build: ./pages/admin
+    container_name: infra-admin
+    expose: ["80"]
+    restart: unless-stopped
+    depends_on: [order-service, catalog]
+
+  catalog:
+    image: novamarket/catalog:1.0.0
+    build: ./services/service-api
+    container_name: infra-catalog
     environment:
       PORT: 3000
+      SERVICE_NAME: catalog
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
-    expose:
-      - "3000"
+    expose: ["3000"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+
+  cart:
+    image: novamarket/cart:1.0.0
+    build: ./services/service-api
+    container_name: infra-cart
+    environment:
+      PORT: 3000
+      SERVICE_NAME: cart
+      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+
+  user:
+    image: novamarket/user:1.0.0
+    build: ./services/service-api
+    container_name: infra-user
+    environment:
+      PORT: 3000
+      SERVICE_NAME: user
+      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+
+  order-service:
+    image: novamarket/orders-api:1.0.0
+    build: ./services/service-api
+    container_name: infra-orders-api
+    environment:
+      PORT: 3000
+      SERVICE_NAME: orders
+      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+
+  payment:
+    image: novamarket/payment:1.0.0
+    build: ./services/service-api
+    container_name: infra-payment
+    environment:
+      PORT: 3000
+      SERVICE_NAME: payment
+      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+
+  shipping:
+    image: novamarket/shipping:1.0.0
+    build: ./services/service-api
+    container_name: infra-shipping
+    environment:
+      PORT: 3000
+      SERVICE_NAME: shipping
+      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+
+  search:
+    image: novamarket/search:1.0.0
+    build: ./services/service-api
+    container_name: infra-search
+    environment:
+      PORT: 3000
+      SERVICE_NAME: search
+      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+
+  wishlist:
+    image: novamarket/wishlist:1.0.0
+    build: ./services/service-api
+    container_name: infra-wishlist
+    environment:
+      PORT: 3000
+      SERVICE_NAME: wishlist
+      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+
+  reviews:
+    image: novamarket/reviews:1.0.0
+    build: ./services/service-api
+    container_name: infra-reviews
+    environment:
+      PORT: 3000
+      SERVICE_NAME: reviews
+      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+
+  notification:
+    image: novamarket/notification:1.0.0
+    build: ./services/service-api
+    container_name: infra-notification
+    environment:
+      PORT: 3000
+      SERVICE_NAME: notification
+      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+
+  discount:
+    image: novamarket/discount:1.0.0
+    build: ./services/service-api
+    container_name: infra-discount
+    environment:
+      PORT: 3000
+      SERVICE_NAME: discount
+      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
 
   db:
-    image: postgres:16-alpine
+    image: postgres:16.4-alpine
     container_name: infra-db
     environment:
       POSTGRES_DB: infra
@@ -53,6 +226,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U infra -d infra"]
       interval: 5s
