@@ -11,13 +11,13 @@ services:
     depends_on:
       - frontend
       - shop
+      - product
       - about
       - account
       - orders
       - checkout
       - admin
       - backend
-
   frontend:
     image: novamarket/frontend:1.2.0
     build: ./app
@@ -25,7 +25,6 @@ services:
     expose: ["80"]
     restart: unless-stopped
     depends_on: [catalog]
-
   shop:
     image: novamarket/shop:1.1.0
     build: ./pages/shop
@@ -33,14 +32,19 @@ services:
     expose: ["80"]
     restart: unless-stopped
     depends_on: [catalog, cart]
-
+  product:
+    image: novamarket/product:1.0.0
+    build: ./pages/product
+    container_name: infra-product
+    expose: ["80"]
+    restart: unless-stopped
+    depends_on: [catalog]
   about:
     image: novamarket/about:1.1.0
     build: ./pages/about
     container_name: infra-about
     expose: ["80"]
     restart: unless-stopped
-
   account:
     image: novamarket/account:1.0.0
     build: ./pages/account
@@ -48,7 +52,6 @@ services:
     expose: ["80"]
     restart: unless-stopped
     depends_on: [user]
-
   orders:
     image: novamarket/orders:1.0.0
     build: ./pages/orders
@@ -56,7 +59,6 @@ services:
     expose: ["80"]
     restart: unless-stopped
     depends_on: [order-service, user]
-
   checkout:
     image: novamarket/checkout:1.0.0
     build: ./pages/checkout
@@ -64,7 +66,6 @@ services:
     expose: ["80"]
     restart: unless-stopped
     depends_on: [cart, order-service, payment, user]
-
   admin:
     image: novamarket/admin:1.0.0
     build: ./pages/admin
@@ -72,7 +73,6 @@ services:
     expose: ["80"]
     restart: unless-stopped
     depends_on: [order-service, catalog]
-
   backend:
     image: novamarket/backend:1.0.1
     build: ./backend
@@ -85,7 +85,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
   catalog:
     image: novamarket/catalog:1.2.0
     build: ./services/catalog
@@ -98,7 +97,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
   cart:
     image: novamarket/cart:1.1.0
     build: ./services/service-api
@@ -112,7 +110,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
   user:
     image: novamarket/user:1.1.0
     build: ./services/service-api
@@ -126,7 +123,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
   order-service:
     image: novamarket/orders-api:1.1.0
     build: ./services/service-api
@@ -134,13 +130,12 @@ services:
     environment:
       PORT: 3000
       SERVICE_NAME: orders
-      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+      DATABASE_URL: postgresql://infra:5432/infra
     expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
-
   payment:
     image: novamarket/payment:1.1.0
     build: ./services/service-api
@@ -154,7 +149,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
   shipping:
     image: novamarket/shipping:1.1.0
     build: ./services/service-api
@@ -168,7 +162,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
   search:
     image: novamarket/search:1.1.0
     build: ./services/service-api
@@ -182,7 +175,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
   wishlist:
     image: novamarket/wishlist:1.1.0
     build: ./services/service-api
@@ -192,11 +184,11 @@ services:
       PORT: 3000
       SERVICE_NAME: wishlist
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
-
   reviews:
     image: novamarket/reviews:1.1.0
     build: ./services/service-api
@@ -210,7 +202,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
   notification:
     image: novamarket/notification:1.1.0
     build: ./services/service-api
@@ -224,7 +215,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
   discount:
     image: novamarket/discount:1.1.0
     build: ./services/service-api
@@ -238,7 +228,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
   db:
     image: postgres:16.4-alpine
     container_name: infra-db
@@ -255,6 +244,5 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
 volumes:
   postgres_data:
