@@ -31,10 +31,12 @@ app.get('/api/products', async (req,res)=>{
     if(brand){values.push(`%${brand}%`); where.push(`p.name ILIKE $${values.length}`)}
     const order={price_asc:'p.price ASC',price_desc:'p.price DESC',rating:'p.rating DESC',popular:'p.review_count DESC',newest:'p.created_at DESC'}[sort]||'p.created_at DESC'
     const lim=Math.min(Math.max(Number(limit)||24,1),100), pgno=Math.max(Number(page)||1,1), offset=(pgno-1)*lim
-    values.push(lim,offset)
-    const sql=`SELECT p.*,COALESCE(json_agg(DISTINCT jsonb_build_object('id',v.id,'sku',v.sku,'title',v.title,'attributes',v.attributes)) FILTER (WHERE v.id IS NOT NULL),'[]') variants FROM products p LEFT JOIN product_variants v ON v.product_id=p.id ${where.length?'WHERE '+where.join(' AND '):''} GROUP BY p.id ORDER BY ${order} LIMIT $${values.length-1} OFFSET $${values.length}`
-    const {rows}=await pool.query(sql,values)
-    res.json({page:pgno,limit:lim,items:rows})
+    const filter=where.length?'WHERE '+where.join(' AND '):''
+    const dataValues=[...values,lim,offset]
+    const sql=`SELECT p.*,COALESCE(json_agg(DISTINCT jsonb_build_object('id',v.id,'sku',v.sku,'title',v.title,'attributes',v.attributes)) FILTER (WHERE v.id IS NOT NULL),'[]') variants FROM products p LEFT JOIN product_variants v ON v.product_id=p.id ${filter} GROUP BY p.id ORDER BY ${order} LIMIT $${dataValues.length-1} OFFSET $${dataValues.length}`
+    const countSql=`SELECT COUNT(*)::int AS total FROM products p ${filter}`
+    const [{rows},countResult]=await Promise.all([pool.query(sql,dataValues),pool.query(countSql,values)])
+    res.json({page:pgno,limit:lim,total:countResult.rows[0].total,items:rows})
   } catch(e){res.status(500).json({error:e.message})}
 })
 
