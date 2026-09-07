@@ -1,6 +1,6 @@
 services:
   gateway:
-    image: novamarket/gateway:1.1.0
+    image: novamarket/gateway:1.1.1
     build: ./gateway
     container_name: infra-gateway
     ports:
@@ -15,6 +15,7 @@ services:
       - account
       - orders
       - admin
+      - backend
 
   frontend:
     image: novamarket/frontend:1.2.0
@@ -62,6 +63,19 @@ services:
     expose: ["80"]
     restart: unless-stopped
     depends_on: [order-service, catalog]
+
+  backend:
+    image: novamarket/backend:1.0.1
+    build: ./backend
+    container_name: infra-backend
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
 
   catalog:
     image: novamarket/catalog:1.0.0
@@ -198,6 +212,7 @@ services:
       PORT: 3000
       SERVICE_NAME: notification
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
