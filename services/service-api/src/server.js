@@ -75,9 +75,21 @@ CREATE TABLE IF NOT EXISTS addresses (
   address TEXT NOT NULL,
   postal_code TEXT
 );
+CREATE TABLE IF NOT EXISTS payments (
+  id BIGSERIAL PRIMARY KEY,
+  order_id BIGINT UNIQUE NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  method TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  amount NUMERIC(14,2) NOT NULL,
+  transaction_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  paid_at TIMESTAMPTZ
+);
 CREATE INDEX IF NOT EXISTS sessions_token_hash_idx ON sessions(token_hash);
 CREATE INDEX IF NOT EXISTS cart_items_cart_idx ON cart_items(cart_id);
 CREATE INDEX IF NOT EXISTS order_items_order_idx ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS payments_user_idx ON payments(user_id);
 `
 
 const sha256 = value => crypto.createHash('sha256').update(value).digest('hex')
@@ -211,6 +223,36 @@ app.post('/api/orders', auth, async (req, res) => {
   finally { client.release() }
 })
 
+app.post('/api/payments', auth, async (req, res) => {
+  const client = await pool.connect()
+  try {
+    const { order_id, method } = req.body || {}
+    if (!order_id || !['online', 'cod'].includes(method)) return res.status(400).json({ error: 'order_id and valid payment method are required' })
+    await client.query('BEGIN')
+    const order = await client.query('SELECT * FROM orders WHERE id=$1 AND user_id=$2 FOR UPDATE', [order_id, req.user.id])
+    if (!order.rows[0]) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'order not found' }) }
+    const existing = await client.query('SELECT * FROM payments WHERE order_id=$1', [order_id])
+    if (existing.rows[0]) { await client.query('COMMIT'); return res.json(existing.rows[0]) }
+    const paid = method === 'online'
+    const status = paid ? 'paid' : 'pending'
+    const orderStatus = paid ? 'paid' : 'cod_pending'
+    const transactionId = paid ? `SIM-${Date.now()}-${crypto.randomBytes(4).toString('hex')}` : null
+    const payment = await client.query(
+      'INSERT INTO payments(order_id,user_id,method,status,amount,transaction_id,paid_at) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+      [order_id, req.user.id, method, status, order.rows[0].total, transactionId, paid ? new Date() : null]
+    )
+    await client.query('UPDATE orders SET status=$1 WHERE id=$2', [orderStatus, order_id])
+    await client.query('COMMIT')
+    res.status(201).json(payment.rows[0])
+  } catch (e) { await client.query('ROLLBACK'); res.status(500).json({ error: e.message }) }
+  finally { client.release() }
+})
+
+app.get('/api/payments', auth, async (req, res) => {
+  try { const { rows } = await pool.query('SELECT * FROM payments WHERE user_id=$1 ORDER BY created_at DESC', [req.user.id]); res.json(rows) }
+  catch (e) { res.status(500).json({ error: e.message }) }
+})
+
 app.get('/api/orders', auth, async (req, res) => {
   try { const { rows } = await pool.query('SELECT * FROM orders WHERE user_id=$1 ORDER BY created_at DESC', [req.user.id]); res.json(rows) }
   catch (e) { res.status(500).json({ error: e.message }) }
@@ -221,7 +263,8 @@ app.get('/api/orders/:id', auth, async (req, res) => {
     const order = await pool.query('SELECT * FROM orders WHERE id=$1 AND user_id=$2', [req.params.id, req.user.id])
     if (!order.rows[0]) return res.status(404).json({ error: 'order not found' })
     const items = await pool.query('SELECT oi.*,p.name FROM order_items oi JOIN products p ON p.id=oi.product_id WHERE oi.order_id=$1', [req.params.id])
-    res.json({ ...order.rows[0], items: items.rows })
+    const payments = await pool.query('SELECT * FROM payments WHERE order_id=$1 ORDER BY created_at DESC', [req.params.id])
+    res.json({ ...order.rows[0], items: items.rows, payments: payments.rows })
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
