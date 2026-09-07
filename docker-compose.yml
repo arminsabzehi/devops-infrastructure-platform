@@ -78,12 +78,11 @@ services:
         condition: service_healthy
 
   catalog:
-    image: novamarket/catalog:1.1.0
-    build: ./services/service-api
+    image: novamarket/catalog:1.2.0
+    build: ./services/catalog
     container_name: infra-catalog
     environment:
       PORT: 3000
-      SERVICE_NAME: catalog
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
     expose: ["3000"]
     restart: unless-stopped
@@ -184,6 +183,7 @@ services:
       PORT: 3000
       SERVICE_NAME: wishlist
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
@@ -226,6 +226,7 @@ services:
       PORT: 3000
       SERVICE_NAME: discount
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
