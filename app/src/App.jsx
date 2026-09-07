@@ -8,11 +8,7 @@ const fallbackProducts = [
   { id: 5, title: 'عینک آفتابی Milano', category: 'اکسسوری', price: 2190000, oldPrice: 2590000, badge: 'محبوب', image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=900&q=85' },
   { id: 6, title: 'اسپیکر قابل حمل Pulse', category: 'دیجیتال', price: 2490000, oldPrice: 2990000, badge: '٪۱۰ تخفیف', image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=900&q=85' },
 ]
-
-const categories = [
-  ['📱', 'دیجیتال', 'گجت و لوازم دیجیتال'], ['👟', 'پوشاک', 'استایل روزمره'],
-  ['🎧', 'صوتی', 'هدفون و اسپیکر'], ['🎒', 'اکسسوری', 'تکمیل استایل'],
-]
+const categories = [['📱','دیجیتال','گجت و لوازم دیجیتال'],['👟','پوشاک','استایل روزمره'],['🎧','صوتی','هدفون و اسپیکر'],['🎒','اکسسوری','تکمیل استایل']]
 const formatPrice = (value) => new Intl.NumberFormat('fa-IR').format(value) + ' تومان'
 
 function App() {
@@ -37,28 +33,21 @@ function App() {
     <div className="top-strip">ارسال رایگان برای سفارش‌های بالای ۳ میلیون تومان <span>•</span> ضمانت اصالت کالا <span>•</span> پشتیبانی ۲۴ ساعته</div>
     <header className="header shell">
       <button className="mobile-menu" onClick={() => setMenu(!menu)}>☰</button>
-      <a className="logo" href="#home"><span>نو</span>مارکت</a>
+      <a className="logo" href="/"> <span>نو</span>مارکت</a>
       <div className="search"><span>⌕</span><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="دنبال چه چیزی می‌گردی؟" /></div>
-      <nav className={menu ? 'nav open' : 'nav'}><a href="#home">خانه</a><a href="#products">فروشگاه</a><a href="#categories">دسته‌بندی‌ها</a><a href="#offers">تخفیف‌ها</a></nav>
+      <nav className={menu ? 'nav open' : 'nav'}>
+        <a href="/">خانه</a><a href="/shop/">فروشگاه</a><a href="/#categories">دسته‌بندی‌ها</a><a href="/#offers">تخفیف‌ها</a><a href="/about/">درباره ما</a>
+      </nav>
       <div className="header-actions"><button className="account">♙ <span>ورود / ثبت‌نام</span></button><button className="cart" onClick={() => alert(`سبد خرید شما ${cart.length} کالا دارد`)}>🛒<b>{cart.length}</b></button></div>
     </header>
-
     <main>
-      <section className="hero-store shell" id="home">
-        <div className="hero-content"><div className="hero-kicker">تجربه‌ای تازه برای خرید آنلاین</div><h1>انتخاب کن،<br /><strong>متفاوت زندگی کن.</strong></h1><p>جدیدترین محصولات دیجیتال، پوشاک و اکسسوری را با قیمت مناسب و ارسال سریع پیدا کن.</p><div className="hero-buttons"><a href="#products" className="primary-btn">مشاهده محصولات <span>←</span></a><a href="#offers" className="text-btn">پیشنهادهای امروز</a></div><div className="trust"><span>✓</span> ضمانت ۷ روزه بازگشت کالا <span>✓</span> پرداخت امن</div></div>
-        <div className="hero-image"><img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1400&q=90" alt="فروشگاه نو مارکت" /><div className="hero-card"><small>پیشنهاد امروز</small><strong>تا ۳۰٪ تخفیف</strong><span>روی محصولات منتخب</span></div></div>
-      </section>
-
-      <section className="category-section shell" id="categories"><div className="section-title"><div><small>دسته‌بندی محبوب</small><h2>برای هر سلیقه‌ای</h2></div><a href="#products">همه دسته‌ها ←</a></div><div className="category-grid">{categories.map(([icon, name, desc]) => <button className="category-card" key={name} onClick={() => { setCategory(name); document.querySelector('#products')?.scrollIntoView({ behavior: 'smooth' }) }}><span>{icon}</span><strong>{name}</strong><small>{desc}</small></button>)}</div></section>
-
-      <section className="products-section shell" id="products"><div className="section-title"><div><small>منتخب نو مارکت</small><h2>محبوب‌ترین‌ها</h2></div><div className="filters">{['همه', 'دیجیتال', 'پوشاک', 'اکسسوری', 'صوتی'].map((item) => <button className={category === item ? 'active' : ''} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div></div><div className="product-grid">{filtered.map((product) => <article className="product" key={product.id}><div className="product-image"><img src={product.image} alt={product.title} /><span>{product.badge}</span><button onClick={() => addToCart(product)}>+</button></div><div className="product-info"><small>{product.category}</small><h3>{product.title}</h3><div className="rating">★★★★★ <em>۴.۸</em></div><div className="price"><strong>{formatPrice(product.price)}</strong><del>{formatPrice(product.oldPrice)}</del></div></div></article>)}</div></section>
-
-      <section className="offer shell" id="offers"><div><small>تا پایان امروز</small><h2>جمعه‌ی هیجان‌انگیز</h2><p>تخفیف‌های ویژه روی صدها محصول منتخب؛ فرصت رو از دست نده.</p><a href="#products" className="primary-btn">خرید با تخفیف ←</a></div><div className="offer-number"><strong>۳۰٪</strong><span>تخفیف ویژه</span></div></section>
+      <section className="hero-store shell" id="home"><div className="hero-content"><div className="hero-kicker">تجربه‌ای تازه برای خرید آنلاین</div><h1>انتخاب کن،<br/><strong>متفاوت زندگی کن.</strong></h1><p>جدیدترین محصولات دیجیتال، پوشاک و اکسسوری را با قیمت مناسب و ارسال سریع پیدا کن.</p><div className="hero-buttons"><a href="/shop/" className="primary-btn">ورود به فروشگاه <span>←</span></a><a href="#offers" className="text-btn">پیشنهادهای امروز</a></div><div className="trust"><span>✓</span> ضمانت ۷ روزه بازگشت کالا <span>✓</span> پرداخت امن</div></div><div className="hero-image"><img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1400&q=90" alt="فروشگاه نو مارکت"/><div className="hero-card"><small>پیشنهاد امروز</small><strong>تا ۳۰٪ تخفیف</strong><span>روی محصولات منتخب</span></div></div></section>
+      <section className="category-section shell" id="categories"><div className="section-title"><div><small>دسته‌بندی محبوب</small><h2>برای هر سلیقه‌ای</h2></div><a href="/shop/">همه دسته‌ها ←</a></div><div className="category-grid">{categories.map(([icon,name,desc])=><a className="category-card" key={name} href="/shop/"><span>{icon}</span><strong>{name}</strong><small>{desc}</small></a>)}</div></section>
+      <section className="products-section shell" id="products"><div className="section-title"><div><small>منتخب نو مارکت</small><h2>محبوب‌ترین‌ها</h2></div><div className="filters">{['همه','دیجیتال','پوشاک','اکسسوری','صوتی'].map((item)=><button className={category===item?'active':''} key={item} onClick={()=>setCategory(item)}>{item}</button>)}</div></div><div className="product-grid">{filtered.map((product)=><article className="product" key={product.id}><div className="product-image"><img src={product.image} alt={product.title}/><span>{product.badge}</span><button onClick={()=>addToCart(product)}>+</button></div><div className="product-info"><small>{product.category}</small><h3>{product.title}</h3><div className="rating">★★★★★ <em>۴.۸</em></div><div className="price"><strong>{formatPrice(product.price)}</strong><del>{formatPrice(product.oldPrice)}</del></div></div></article>)}</div></section>
+      <section className="offer shell" id="offers"><div><small>تا پایان امروز</small><h2>جمعه‌ی هیجان‌انگیز</h2><p>تخفیف‌های ویژه روی صدها محصول منتخب؛ فرصت رو از دست نده.</p><a href="/shop/" className="primary-btn">خرید با تخفیف ←</a></div><div className="offer-number"><strong>۳۰٪</strong><span>تخفیف ویژه</span></div></section>
       <section className="features shell"><div>🚚<strong>ارسال سریع</strong><span>تحویل در کوتاه‌ترین زمان</span></div><div>🛡️<strong>ضمانت اصالت</strong><span>خرید مطمئن و بدون نگرانی</span></div><div>↩️<strong>هفت روز بازگشت</strong><span>خرید با خیال راحت</span></div><div>☎️<strong>پشتیبانی ۲۴/۷</strong><span>همیشه کنار شما هستیم</span></div></section>
     </main>
-
-    <footer className="footer-store"><div className="shell footer-inner"><div><a className="logo" href="#home"><span>نو</span>مارکت</a><p>فروشگاهی برای انتخاب‌های بهتر، سریع‌تر و مطمئن‌تر.</p></div><div><strong>راهنمای خرید</strong><a href="#products">روش ثبت سفارش</a><a href="#products">شیوه‌های پرداخت</a><a href="#offers">شرایط بازگشت</a></div><div><strong>خدمات مشتریان</strong><a href="#home">تماس با ما</a><a href="#home">پرسش‌های متداول</a><a href="#home">پیگیری سفارش</a></div><div><strong>وضعیت سرویس</strong><span className="api"><i /> {apiStatus}</span><small>Frontend · Backend · Database</small></div></div><div className="copyright">© ۱۴۰۵ نو مارکت — ساخته شده با معماری چندلایه و آماده‌ی Kubernetes</div></footer>
+    <footer className="footer-store"><div className="shell footer-inner"><div><a className="logo" href="/"><span>نو</span>مارکت</a><p>فروشگاهی برای انتخاب‌های بهتر، سریع‌تر و مطمئن‌تر.</p></div><div><strong>راهنمای خرید</strong><a href="/shop/">روش ثبت سفارش</a><a href="/shop/">شیوه‌های پرداخت</a><a href="/shop/">شرایط بازگشت</a></div><div><strong>خدمات مشتریان</strong><a href="/about/">درباره ما</a><a href="/about/">تماس با ما</a><a href="/about/">پرسش‌های متداول</a></div><div><strong>وضعیت سرویس</strong><span className="api"><i/> {apiStatus}</span><small>Frontend · Backend · Database</small></div></div><div className="copyright">© ۱۴۰۵ نو مارکت — ساخته شده با معماری چندلایه و آماده‌ی Kubernetes</div></footer>
   </div>
 }
-
 export default App
