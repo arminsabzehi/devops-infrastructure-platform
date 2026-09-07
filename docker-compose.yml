@@ -1,6 +1,7 @@
 services:
   gateway:
-    image: nginx:1.29-alpine
+    image: novamarket/gateway:1.1.0
+    build: ./gateway
     container_name: infra-gateway
     ports:
       - "8083:80"
@@ -16,7 +17,7 @@ services:
       - admin
 
   frontend:
-    image: novamarket/frontend:1.1.0
+    image: novamarket/frontend:1.2.0
     build: ./app
     container_name: infra-frontend
     expose: ["80"]
@@ -136,11 +137,11 @@ services:
     image: novamarket/shipping:1.0.0
     build: ./services/service-api
     container_name: infra-shipping
+    expose: ["3000"]
     environment:
       PORT: 3000
       SERVICE_NAME: shipping
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
-    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
@@ -150,11 +151,11 @@ services:
     image: novamarket/search:1.0.0
     build: ./services/service-api
     container_name: infra-search
+    expose: ["3000"]
     environment:
       PORT: 3000
       SERVICE_NAME: search
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
-    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
@@ -164,11 +165,11 @@ services:
     image: novamarket/wishlist:1.0.0
     build: ./services/service-api
     container_name: infra-wishlist
+    expose: ["3000"]
     environment:
       PORT: 3000
       SERVICE_NAME: wishlist
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
-    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
@@ -178,11 +179,11 @@ services:
     image: novamarket/reviews:1.0.0
     build: ./services/service-api
     container_name: infra-reviews
+    expose: ["3000"]
     environment:
       PORT: 3000
       SERVICE_NAME: reviews
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
-    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
@@ -192,11 +193,11 @@ services:
     image: novamarket/notification:1.0.0
     build: ./services/service-api
     container_name: infra-notification
+    expose: ["3000"]
     environment:
       PORT: 3000
       SERVICE_NAME: notification
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
-    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
@@ -206,11 +207,11 @@ services:
     image: novamarket/discount:1.0.0
     build: ./services/service-api
     container_name: infra-discount
+    expose: ["3000"]
     environment:
       PORT: 3000
       SERVICE_NAME: discount
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
-    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
