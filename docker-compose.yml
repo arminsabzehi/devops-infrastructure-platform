@@ -212,7 +212,6 @@ services:
       PORT: 3000
       SERVICE_NAME: notification
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
-    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
