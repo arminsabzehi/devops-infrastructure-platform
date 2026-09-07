@@ -1,6 +1,6 @@
 services:
   gateway:
-    image: novamarket/gateway:1.1.1
+    image: novamarket/gateway:1.1.2
     build: ./gateway
     container_name: infra-gateway
     ports:
@@ -78,7 +78,7 @@ services:
         condition: service_healthy
 
   catalog:
-    image: novamarket/catalog:1.0.0
+    image: novamarket/catalog:1.1.0
     build: ./services/service-api
     container_name: infra-catalog
     environment:
@@ -92,7 +92,7 @@ services:
         condition: service_healthy
 
   cart:
-    image: novamarket/cart:1.0.0
+    image: novamarket/cart:1.1.0
     build: ./services/service-api
     container_name: infra-cart
     environment:
@@ -106,7 +106,7 @@ services:
         condition: service_healthy
 
   user:
-    image: novamarket/user:1.0.0
+    image: novamarket/user:1.1.0
     build: ./services/service-api
     container_name: infra-user
     environment:
@@ -120,7 +120,7 @@ services:
         condition: service_healthy
 
   order-service:
-    image: novamarket/orders-api:1.0.0
+    image: novamarket/orders-api:1.1.0
     build: ./services/service-api
     container_name: infra-orders-api
     environment:
@@ -134,21 +134,21 @@ services:
         condition: service_healthy
 
   payment:
-    image: novamarket/payment:1.0.0
+    image: novamarket/payment:1.1.0
     build: ./services/service-api
     container_name: infra-payment
+    expose: ["3000"]
     environment:
       PORT: 3000
       SERVICE_NAME: payment
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
-    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
 
   shipping:
-    image: novamarket/shipping:1.0.0
+    image: novamarket/shipping:1.1.0
     build: ./services/service-api
     container_name: infra-shipping
     expose: ["3000"]
@@ -162,7 +162,7 @@ services:
         condition: service_healthy
 
   search:
-    image: novamarket/search:1.0.0
+    image: novamarket/search:1.1.0
     build: ./services/service-api
     container_name: infra-search
     expose: ["3000"]
@@ -176,7 +176,7 @@ services:
         condition: service_healthy
 
   wishlist:
-    image: novamarket/wishlist:1.0.0
+    image: novamarket/wishlist:1.1.0
     build: ./services/service-api
     container_name: infra-wishlist
     expose: ["3000"]
@@ -190,7 +190,7 @@ services:
         condition: service_healthy
 
   reviews:
-    image: novamarket/reviews:1.0.0
+    image: novamarket/reviews:1.1.0
     build: ./services/service-api
     container_name: infra-reviews
     expose: ["3000"]
@@ -204,7 +204,7 @@ services:
         condition: service_healthy
 
   notification:
-    image: novamarket/notification:1.0.0
+    image: novamarket/notification:1.1.0
     build: ./services/service-api
     container_name: infra-notification
     expose: ["3000"]
@@ -218,7 +218,7 @@ services:
         condition: service_healthy
 
   discount:
-    image: novamarket/discount:1.0.0
+    image: novamarket/discount:1.1.0
     build: ./services/service-api
     container_name: infra-discount
     expose: ["3000"]
