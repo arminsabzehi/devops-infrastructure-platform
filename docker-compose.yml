@@ -1,0 +1,39 @@
+services:
+  frontend:
+    build: ./app
+    container_name: infra-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    container_name: infra-backend
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    expose:
+      - "3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: infra-db
+    environment:
+      POSTGRES_DB: infra
+      POSTGRES_USER: infra
+      POSTGRES_PASSWORD: infra
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U infra -d infra"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
