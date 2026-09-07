@@ -1,0 +1,8 @@
+{
+  "name": "novamarket-catalog",
+  "private": true,
+  "version": "1.2.0",
+  "type": "module",
+  "scripts": {"start": "node src/server.js"},
+  "dependencies": {"express": "latest", "pg": "latest"}
+}
