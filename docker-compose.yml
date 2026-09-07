@@ -14,6 +14,7 @@ services:
       - about
       - account
       - orders
+      - checkout
       - admin
       - backend
 
@@ -55,6 +56,14 @@ services:
     expose: ["80"]
     restart: unless-stopped
     depends_on: [order-service, user]
+
+  checkout:
+    image: novamarket/checkout:1.0.0
+    build: ./pages/checkout
+    container_name: infra-checkout
+    expose: ["80"]
+    restart: unless-stopped
+    depends_on: [cart, order-service, payment, user]
 
   admin:
     image: novamarket/admin:1.0.0
