@@ -3,21 +3,10 @@ services:
     image: novamarket/gateway:1.1.2
     build: ./gateway
     container_name: infra-gateway
-    ports:
-      - "8083:80"
-    volumes:
-      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports: ["8083:80"]
+    volumes: ["./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro"]
     restart: unless-stopped
-    depends_on:
-      - frontend
-      - shop
-      - product
-      - about
-      - account
-      - orders
-      - checkout
-      - admin
-      - backend
+    depends_on: [frontend, shop, product, about, account, orders, checkout, admin, backend]
   frontend:
     image: novamarket/frontend:1.2.0
     build: ./app
@@ -77,172 +66,104 @@ services:
     image: novamarket/backend:1.0.1
     build: ./backend
     container_name: infra-backend
-    environment:
-      PORT: 3000
-      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    environment: {PORT: 3000, DATABASE_URL: postgresql://infra:infra@db:5432/infra}
     expose: ["3000"]
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: {db: {condition: service_healthy}}
   catalog:
     image: novamarket/catalog:1.2.0
     build: ./services/catalog
     container_name: infra-catalog
-    environment:
-      PORT: 3000
-      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    environment: {PORT: 3000, DATABASE_URL: postgresql://infra:infra@db:5432/infra}
     expose: ["3000"]
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: {db: {condition: service_healthy}}
   cart:
     image: novamarket/cart:1.1.0
     build: ./services/service-api
     container_name: infra-cart
-    environment:
-      PORT: 3000
-      SERVICE_NAME: cart
-      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    environment: {PORT: 3000, SERVICE_NAME: cart, DATABASE_URL: postgresql://infra:infra@db:5432/infra}
     expose: ["3000"]
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: {db: {condition: service_healthy}}
   user:
     image: novamarket/user:1.1.0
     build: ./services/service-api
     container_name: infra-user
-    environment:
-      PORT: 3000
-      SERVICE_NAME: user
-      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    environment: {PORT: 3000, SERVICE_NAME: user, DATABASE_URL: postgresql://infra:infra@db:5432/infra}
     expose: ["3000"]
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: {db: {condition: service_healthy}}
   order-service:
     image: novamarket/orders-api:1.1.0
     build: ./services/service-api
     container_name: infra-orders-api
-    environment:
-      PORT: 3000
-      SERVICE_NAME: orders
-      DATABASE_URL: postgresql://infra:5432/infra
+    environment: {PORT: 3000, SERVICE_NAME: orders, DATABASE_URL: postgresql://infra:infra@db:5432/infra}
     expose: ["3000"]
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: {db: {condition: service_healthy}}
   payment:
     image: novamarket/payment:1.1.0
     build: ./services/service-api
     container_name: infra-payment
+    environment: {PORT: 3000, SERVICE_NAME: payment, DATABASE_URL: postgresql://infra:infra@db:5432/infra}
     expose: ["3000"]
-    environment:
-      PORT: 3000
-      SERVICE_NAME: payment
-      DATABASE_URL: postgresql://infra:infra@db:5432/infra
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: {db: {condition: service_healthy}}
   shipping:
     image: novamarket/shipping:1.1.0
     build: ./services/service-api
     container_name: infra-shipping
     expose: ["3000"]
-    environment:
-      PORT: 3000
-      SERVICE_NAME: shipping
-      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    environment: {PORT: 3000, SERVICE_NAME: shipping, DATABASE_URL: postgresql://infra:infra@db:5432/infra}
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: {db: {condition: service_healthy}}
   search:
     image: novamarket/search:1.1.0
     build: ./services/service-api
     container_name: infra-search
     expose: ["3000"]
-    environment:
-      PORT: 3000
-      SERVICE_NAME: search
-      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    environment: {PORT: 3000, SERVICE_NAME: search, DATABASE_URL: postgresql://infra:infra@db:5432/infra}
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: {db: {condition: service_healthy}}
   wishlist:
     image: novamarket/wishlist:1.1.0
     build: ./services/service-api
     container_name: infra-wishlist
     expose: ["3000"]
-    environment:
-      PORT: 3000
-      SERVICE_NAME: wishlist
-      DATABASE_URL: postgresql://infra:infra@db:5432/infra
-    expose: ["3000"]
+    environment: {PORT: 3000, SERVICE_NAME: wishlist, DATABASE_URL: postgresql://infra:infra@db:5432/infra}
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: {db: {condition: service_healthy}}
   reviews:
     image: novamarket/reviews:1.1.0
     build: ./services/service-api
     container_name: infra-reviews
     expose: ["3000"]
-    environment:
-      PORT: 3000
-      SERVICE_NAME: reviews
-      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    environment: {PORT: 3000, SERVICE_NAME: reviews, DATABASE_URL: postgresql://infra:infra@db:5432/infra}
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: {db: {condition: service_healthy}}
   notification:
     image: novamarket/notification:1.1.0
     build: ./services/service-api
     container_name: infra-notification
     expose: ["3000"]
-    environment:
-      PORT: 3000
-      SERVICE_NAME: notification
-      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    environment: {PORT: 3000, SERVICE_NAME: notification, DATABASE_URL: postgresql://infra:infra@db:5432/infra}
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: {db: {condition: service_healthy}}
   discount:
     image: novamarket/discount:1.1.0
     build: ./services/service-api
     container_name: infra-discount
     expose: ["3000"]
-    environment:
-      PORT: 3000
-      SERVICE_NAME: discount
-      DATABASE_URL: postgresql://infra:infra@db:5432/infra
+    environment: {PORT: 3000, SERVICE_NAME: discount, DATABASE_URL: postgresql://infra:infra@db:5432/infra}
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
+    depends_on: {db: {condition: service_healthy}}
   db:
     image: postgres:16.4-alpine
     container_name: infra-db
-    environment:
-      POSTGRES_DB: infra
-      POSTGRES_USER: infra
-      POSTGRES_PASSWORD: infra
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    environment: {POSTGRES_DB: infra, POSTGRES_USER: infra, POSTGRES_PASSWORD: infra}
+    volumes: ["postgres_data:/var/lib/postgresql/data", "./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro"]
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U infra -d infra"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -U infra -d infra"], interval: 5s, timeout: 5s, retries: 10}
 volumes:
   postgres_data:
