@@ -183,7 +183,6 @@ services:
       PORT: 3000
       SERVICE_NAME: wishlist
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
-    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
@@ -226,7 +225,6 @@ services:
       PORT: 3000
       SERVICE_NAME: discount
       DATABASE_URL: postgresql://infra:infra@db:5432/infra
-    expose: ["3000"]
     restart: unless-stopped
     depends_on:
       db:
