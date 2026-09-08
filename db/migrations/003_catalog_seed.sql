@@ -34,7 +34,7 @@ INSERT INTO products(name,slug,category,price,old_price,image,badge,stock,rating
 ('اسپیکر JBL Charge 5','jbl-charge-5','هدفون و هندزفری',7290000,8190000,'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=900&q=85','٪۱۱ تخفیف',24,4.7,534,'اسپیکر قابل حمل با صدای قدرتمند.'),
 ('اسپیکر Sony SRS-XB100','sony-srs-xb100','هدفون و هندزفری',4290000,4990000,'https://images.unsplash.com/photo-1589256469067-ea99122bbdc4?auto=format&fit=crop&w=900&q=85','جدید',32,4.6,268,'اسپیکر کوچک و قابل حمل سونی.'),
 ('مانیتور LG UltraGear 27','lg-ultragear-27','لپ‌تاپ',18990000,20990000,'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=900&q=85','گیمینگ',15,4.8,389,'مانیتور گیمینگ با نرخ نوسازی بالا.'),
-('تبلت Samsung Galaxy Tab S9 FE','samsung-tab-s9-fe','موبایل',24990000,27990000,'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=900&q=85','پیشنهاد ویژه',13,4.7,412,'تبلت سامسونگ مناسب کار و سرگرمی.');
+('تبلت Samsung Galaxy Tab S9 FE','samsung-tab-s9-fe','موبایل',24990000,27990000,'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=900&q=85','پیشنهاد ویژه',13,4.7,412,'تبلت سامسونگ مناسب کار و سرگرمی.') ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO product_variants(product_id,sku,title,attributes)
 SELECT p.id, upper(replace(p.slug,'-',''))||'-STD','نسخه استاندارد','{"variant":"standard"}'::jsonb
