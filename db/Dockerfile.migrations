@@ -5,5 +5,6 @@ COPY db/migrations/002_marketplace.sql /migrations/002_marketplace.sql
 COPY db/migrations/003_catalog_seed.sql /migrations/003_catalog_seed.sql
 COPY db/migrations/004_product_details.sql /migrations/004_product_details.sql
 COPY db/migrations/005_fix_macbook_image.sql /migrations/005_fix_macbook_image.sql
+COPY db/migrations/006_fix_dualsense_image.sql /migrations/006_fix_dualsense_image.sql
 
 CMD ["sleep", "infinity"]
