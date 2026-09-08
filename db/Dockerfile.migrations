@@ -1,0 +1,8 @@
+FROM reg.test.local:5000/library/postgres:16.4-alpine
+
+COPY db/init.sql /migrations/000_init.sql
+COPY db/migrations/002_marketplace.sql /migrations/002_marketplace.sql
+COPY db/migrations/003_catalog_seed.sql /migrations/003_catalog_seed.sql
+COPY db/migrations/004_product_details.sql /migrations/004_product_details.sql
+
+CMD ["sleep", "infinity"]
