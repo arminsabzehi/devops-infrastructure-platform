@@ -69,7 +69,9 @@ async function mapImages(rows) {
 function requireAdmin(req, res, next) {
   if (!adminToken) return res.status(503).json({ error: 'admin API is not configured' })
   const supplied = req.get('x-admin-token') || ''
-  if (!crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(adminToken))) return res.status(401).json({ error: 'unauthorized' })
+  const a = Buffer.from(supplied)
+  const b = Buffer.from(adminToken)
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: 'unauthorized' })
   next()
 }
 
@@ -134,7 +136,6 @@ app.get('/api/products/:id/offers', async(req,res)=>{try {const {rows}=await poo
 app.get('/api/products/:id/variants', async(req,res)=>{try {const {rows}=await pool.query(`SELECT id,sku,title,attributes,is_active FROM product_variants WHERE product_id=$1 ORDER BY id`,[req.params.id]);res.json(rows)}catch(e){res.status(500).json({error:e.message})}})
 app.get('/api/search', async(req,res)=>{try {const q=String(req.query.q||'').trim(); if(!q)return res.json({query:'',items:[]}); const {rows}=await pool.query(`SELECT id,name,slug,category,price,old_price,image,rating,review_count FROM products WHERE name ILIKE $1 OR description ILIKE $1 ORDER BY review_count DESC LIMIT 50`,[`%${q}%`]);res.json({query:q,count:rows.length,items:await mapProducts(rows)})}catch(e){res.status(500).json({error:e.message})}})
 
-// Admin product management. Content changes live in PostgreSQL/MinIO and do not require an image rebuild.
 app.get('/api/admin/products', requireAdmin, async (_req,res)=>{
   try { const {rows}=await pool.query(`SELECT id,name,slug,category,price,old_price,image,badge,stock,rating,review_count,description,created_at FROM products ORDER BY id DESC`); res.json(await mapProducts(rows)) }
   catch(e){res.status(500).json({error:e.message})}
