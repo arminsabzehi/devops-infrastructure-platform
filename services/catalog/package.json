@@ -1,8 +1,8 @@
 {
   "name": "novamarket-catalog",
   "private": true,
-  "version": "1.4.0",
+  "version": "1.5.0",
   "type": "module",
   "scripts": {"start": "node src/server.js"},
-  "dependencies": {"express": "latest", "minio": "8.0.7", "pg": "latest"}
+  "dependencies": {"express": "latest", "minio": "8.0.7", "multer": "^2.0.2", "pg": "latest"}
 }
