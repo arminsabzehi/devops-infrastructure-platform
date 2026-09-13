@@ -1,6 +1,8 @@
 import express from 'express'
 import pg from 'pg'
 import { Client } from 'minio'
+import multer from 'multer'
+import crypto from 'crypto'
 
 const app = express()
 const { Pool } = pg
@@ -14,6 +16,7 @@ const s3PublicBaseUrl = process.env.S3_PUBLIC_BASE_URL || ''
 const s3AccessKey = process.env.S3_ACCESS_KEY || ''
 const s3SecretKey = process.env.S3_SECRET_KEY || ''
 const s3PresignExpiry = Math.max(Number(process.env.S3_PRESIGN_EXPIRY || 3600), 60)
+const adminToken = process.env.ADMIN_TOKEN || ''
 
 const s3Client = s3Endpoint && s3Bucket && s3AccessKey && s3SecretKey
   ? new Client({
@@ -24,6 +27,15 @@ const s3Client = s3Endpoint && s3Bucket && s3AccessKey && s3SecretKey
       secretKey: s3SecretKey
     })
   : null
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) return cb(new Error('only jpeg, png, webp and gif images are allowed'))
+    cb(null, true)
+  }
+})
 
 async function resolveImageUrl(value) {
   if (!value) return value
@@ -52,6 +64,21 @@ async function mapProducts(rows) {
 
 async function mapImages(rows) {
   return Promise.all(rows.map(async row => ({...row, url: await resolveImageUrl(row.url)})))
+}
+
+function requireAdmin(req, res, next) {
+  if (!adminToken) return res.status(503).json({ error: 'admin API is not configured' })
+  const supplied = req.get('x-admin-token') || ''
+  if (!crypto.timingSafeEqual(Buffer.from(supplied), Buffer.from(adminToken))) return res.status(401).json({ error: 'unauthorized' })
+  next()
+}
+
+async function storeImage(productId, file, sortOrder = 0) {
+  if (!s3Client) throw new Error('S3/MinIO is not configured')
+  const ext = ({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif'})[file.mimetype]
+  const objectKey = `products/${productId}/${sortOrder === 0 ? 'main' : `image-${sortOrder}`}-${crypto.randomUUID()}.${ext}`
+  await s3Client.putObject(s3Bucket, objectKey, file.buffer, file.size, { 'Content-Type': file.mimetype })
+  return objectKey
 }
 
 app.use(express.json())
@@ -107,4 +134,54 @@ app.get('/api/products/:id/offers', async(req,res)=>{try {const {rows}=await poo
 app.get('/api/products/:id/variants', async(req,res)=>{try {const {rows}=await pool.query(`SELECT id,sku,title,attributes,is_active FROM product_variants WHERE product_id=$1 ORDER BY id`,[req.params.id]);res.json(rows)}catch(e){res.status(500).json({error:e.message})}})
 app.get('/api/search', async(req,res)=>{try {const q=String(req.query.q||'').trim(); if(!q)return res.json({query:'',items:[]}); const {rows}=await pool.query(`SELECT id,name,slug,category,price,old_price,image,rating,review_count FROM products WHERE name ILIKE $1 OR description ILIKE $1 ORDER BY review_count DESC LIMIT 50`,[`%${q}%`]);res.json({query:q,count:rows.length,items:await mapProducts(rows)})}catch(e){res.status(500).json({error:e.message})}})
 
+// Admin product management. Content changes live in PostgreSQL/MinIO and do not require an image rebuild.
+app.get('/api/admin/products', requireAdmin, async (_req,res)=>{
+  try { const {rows}=await pool.query(`SELECT id,name,slug,category,price,old_price,image,badge,stock,rating,review_count,description,created_at FROM products ORDER BY id DESC`); res.json(await mapProducts(rows)) }
+  catch(e){res.status(500).json({error:e.message})}
+})
+
+app.put('/api/admin/products/:id', requireAdmin, async (req,res)=>{
+  try {
+    const {name,slug,category,price,old_price,image,badge,stock,description}=req.body
+    if(!name || !slug || !category || price === undefined) return res.status(400).json({error:'name, slug, category and price are required'})
+    const {rows}=await pool.query(`UPDATE products SET name=$1,slug=$2,category=$3,price=$4,old_price=$5,image=COALESCE($6,image),badge=$7,stock=$8,description=$9 WHERE id=$10 RETURNING *`,[name,slug,category,Number(price),old_price === null || old_price === '' ? null : Number(old_price),image || null,badge || '',Number(stock || 0),description || '',req.params.id])
+    if(!rows[0]) return res.status(404).json({error:'product not found'})
+    res.json(await mapProduct(rows[0]))
+  } catch(e){res.status(500).json({error:e.message})}
+})
+
+app.post('/api/admin/products/:id/image', requireAdmin, upload.single('image'), async (req,res)=>{
+  try {
+    if(!req.file) return res.status(400).json({error:'image file is required'})
+    const productId=Number(req.params.id)
+    if(!Number.isInteger(productId)) return res.status(400).json({error:'invalid product id'})
+    const exists=await pool.query('SELECT id FROM products WHERE id=$1',[productId])
+    if(!exists.rows[0]) return res.status(404).json({error:'product not found'})
+    const old=await pool.query('SELECT url FROM product_images WHERE product_id=$1 AND sort_order=0 ORDER BY id LIMIT 1',[productId])
+    const objectKey=await storeImage(productId,req.file,0)
+    await pool.query('BEGIN')
+    try {
+      await pool.query('UPDATE products SET image=$1 WHERE id=$2',[objectKey,productId])
+      if(old.rows[0]) await pool.query('UPDATE product_images SET url=$1 WHERE product_id=$2 AND sort_order=0',[objectKey,productId])
+      else await pool.query('INSERT INTO product_images(product_id,url,sort_order) VALUES($1,$2,0)',[productId,objectKey])
+      await pool.query('COMMIT')
+    } catch(e) { await pool.query('ROLLBACK'); throw e }
+    res.json({product_id:productId,image:await resolveImageUrl(objectKey),object_key:objectKey})
+  } catch(e){res.status(500).json({error:e.message})}
+})
+
+app.delete('/api/admin/products/:id/image', requireAdmin, async (req,res)=>{
+  try {
+    const productId=Number(req.params.id)
+    const old=await pool.query('SELECT url FROM product_images WHERE product_id=$1 AND sort_order=0 ORDER BY id LIMIT 1',[productId])
+    await pool.query('UPDATE products SET image=\'\' WHERE id=$1',[productId])
+    await pool.query('DELETE FROM product_images WHERE product_id=$1 AND sort_order=0',[productId])
+    if(old.rows[0] && s3Client && !/^https?:\/\//i.test(old.rows[0].url)) {
+      try { await s3Client.removeObject(s3Bucket,old.rows[0].url.replace(/^\//,'')) } catch(e) { console.error(`failed to remove old image: ${e.message}`) }
+    }
+    res.json({ok:true})
+  } catch(e){res.status(500).json({error:e.message})}
+})
+
+app.use((err,_req,res,_next)=>res.status(400).json({error:err.message || 'request failed'}))
 app.listen(port,()=>console.log(`catalog listening on ${port}`))
