@@ -3,6 +3,15 @@
   "private": true,
   "version": "1.5.0",
   "type": "module",
-  "scripts": {"start": "node src/server.js"},
-  "dependencies": {"express": "latest", "minio": "8.0.7", "multer": "^2.0.2", "pg": "latest"}
+  "scripts": {
+    "start": "node src/server.js",
+    "images:download": "node scripts/import-product-images.js --download-only",
+    "images:import": "node scripts/import-product-images.js"
+  },
+  "dependencies": {
+    "express": "latest",
+    "minio": "8.0.7",
+    "multer": "^2.0.2",
+    "pg": "latest"
+  }
 }
