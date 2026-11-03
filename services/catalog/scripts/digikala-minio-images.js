@@ -10,10 +10,10 @@ const manifestPath = path.join(root, 'assets/digikala-product-images.json')
 const outputDir = process.env.IMAGE_ASSET_DIR || path.join(root, 'assets/product-images-digikala')
 const mode = process.argv[2] || 'discover'
 const apply = process.argv.includes('--apply')
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 const headers = {
-  'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36',
-  'Accept': 'application/json, text/plain, */*',
+  'User-Agent': 'NovaMarket-Lab-CatalogImporter/1.0 (local infrastructure lab)',
+  'Accept': 'application/json',
   'Accept-Language': 'fa-IR,fa;q=0.9,en;q=0.8'
 }
 
@@ -24,49 +24,65 @@ function required(name) {
 }
 
 async function getJson(url) {
-  const response = await fetch(url, { headers, signal: AbortSignal.timeout(25000) })
+  const response = await fetch(url, { headers, signal: AbortSignal.timeout(30000) })
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${url}`)
   return response.json()
 }
 
-function walk(value, visit, depth = 0) {
-  if (!value || typeof value !== 'object' || depth > 12) return
-  if (Array.isArray(value)) return value.forEach(item => walk(item, visit, depth + 1))
-  visit(value)
-  for (const child of Object.values(value)) walk(child, visit, depth + 1)
+function productFromResponse(json) {
+  return json?.data?.product || json?.data || json?.product || json
 }
 
-function imageUrls(product) {
-  const found = []
-  walk(product, obj => {
-    for (const [key, value] of Object.entries(obj)) {
-      if (typeof value !== 'string' || !/^https?:\/\//i.test(value)) continue
-      if (/image|img|picture|photo|thumbnail|main/i.test(key) ||
-          /dkstatics-public\.digikala\.com|digikala-products/i.test(value)) {
-        if (/\.(jpe?g|png|webp)(\?|$)/i.test(value) ||
-            /dkstatics-public\.digikala\.com|digikala-products/i.test(value)) found.push(value)
+function productsFromSearch(json) {
+  const data = json?.data || {}
+  return data.products || data?.widget?.data?.products || []
+}
+
+function imageList(product) {
+  const images = product?.images
+  const result = []
+  const add = value => {
+    if (typeof value === 'string' && /^https:\/\//i.test(value)) result.push(value)
+    else if (value && typeof value === 'object') {
+      const url = value.url || value.src || value.webp_url || value.webp
+      if (typeof url === 'string' && /^https:\/\//i.test(url)) result.push(url)
+    }
+  }
+  if (Array.isArray(images)) images.forEach(add)
+  else if (images && typeof images === 'object') {
+    add(images.main)
+    add(images.image)
+    add(images.list)
+    add(images
+    .main_image)
+    for (const [key, value] of Object.entries(images)) {
+      if (/main|image|img|photo|gallery/i.test(key)) {
+        if (Array.isArray(value)) value.forEach(add)
+        else add(value)
       }
     }
-  })
-  return [...new Set(found)]
+  }
+  if (result.length === 0) {
+    const main = product?.image || product?.image_url || product?.thumbnail
+    add(main)
+  }
+  return [...new Set(result)]
 }
 
-function productCandidates(json) {
-  const candidates = []
-  walk(json, obj => {
-    const id = obj.id ?? obj.product_id
-    const title = obj.title_fa ?? obj.title ?? obj.name
-    if (id && title && imageUrls(obj).length) {
-      candidates.push({
-        id: String(id),
-        title: String(title),
-        url: obj.url ? (String(obj.url).startsWith('http') ? obj.url : `https://www.digikala.com${obj.url}`) : null,
-        image: imageUrls(obj)[0]
-      })
-    }
-  })
-  const seen = new Set()
-  return candidates.filter(item => !seen.has(item.id) && seen.add(item.id)).slice(0, 8)
+function normalizeCandidate(product) {
+  const id = product?.id || product?.product_id
+  const title = product?.title_fa || product?.title || product?.name
+  const images = imageList(product)
+  if (!id || !title || images.length === 0) return null
+  const rawUrl = product?.url || product?.web_url
+  return {
+    digikalaProductId: String(id),
+    title: String(title),
+    productUrl: rawUrl
+      ? (String(rawUrl).startsWith('http') ? rawUrl : `https://www.digikala.com${rawUrl}`)
+      : `https://www.digikala.com/product/dkp-${id}/`,
+    previewImage: images[0]
+  }
 }
 
 async function discover(items) {
@@ -75,68 +91,78 @@ async function discover(items) {
     const url = `https://api.digikala.com/v1/search/?q=${encodeURIComponent(item.query)}`
     try {
       const json = await getJson(url)
-      const candidates = productCandidates(json)
+      const candidates = productsFromSearch(json).map(normalizeCandidate).filter(Boolean).slice(0, 8)
       results.push({ ...item, candidates })
       console.log(`${item.slug}: ${candidates.length} candidate(s)`)
     } catch (error) {
       results.push({ ...item, candidates: [], error: error.message })
       console.error(`${item.slug}: ${error.message}`)
     }
-    await sleep(900)
+    await delay(1200)
   }
   const file = path.join(root, 'assets/digikala-image-candidates.json')
   await fs.writeFile(file, JSON.stringify(results, null, 2) + '\n')
-  console.log(`Saved review file: ${file}`)
-  console.log('Review candidates and copy the chosen product ID into digikala-product-images.json before running download.')
+  console.log(`Candidate list written to ${file}`)
+  console.log('Review each candidate and set digikalaProductId in digikala-product-images.json. No images or database records changed.')
 }
 
-async function getProductImage(productId) {
+async function getSelectedProduct(productId) {
   const json = await getJson(`https://api.digikala.com/v2/product/${encodeURIComponent(productId)}/`)
-  const candidates = productCandidates(json)
-  const urls = imageUrls(json)
-  const main = urls[0] || candidates[0]?.image
-  if (!main) throw new Error(`No image URL found for Digikala product ${productId}`)
-  return main
+  const product = productFromResponse(json)
+  const images = imageList(product)
+  if (!images.length) throw new Error(`No product images found for Digikala ID ${productId}`)
+  return { product, images }
 }
 
 async function download(items) {
   await fs.mkdir(outputDir, { recursive: true })
   const selected = items.filter(item => item.digikalaProductId)
-  if (!selected.length) throw new Error('No digikalaProductId selected. Run discover, review candidates, then fill the manifest.')
-  const prepared = []
+  if (!selected.length) throw new Error('No digikalaProductId selected. Review digikala-image-candidates.json and fill the manifest first.')
+  const report = []
   for (const item of selected) {
-    const imageUrl = await getProductImage(item.digikalaProductId)
-    const response = await fetch(imageUrl, { headers, signal: AbortSignal.timeout(30000) })
+    const { product, images } = await getSelectedProduct(item.digikalaProductId)
+    const response = await fetch(images[0], { headers, signal: AbortSignal.timeout(30000) })
     if (!response.ok) throw new Error(`Image download failed for ${item.slug}: HTTP ${response.status}`)
-    const type = response.headers.get('content-type') || ''
-    if (!type.startsWith('image/')) throw new Error(`Non-image response for ${item.slug}: ${type}`)
+    const contentType = response.headers.get('content-type') || ''
+    if (!contentType.startsWith('image/')) throw new Error(`Non-image response for ${item.slug}: ${contentType}`)
     const bytes = Buffer.from(await response.arrayBuffer())
     if (bytes.length < 5000) throw new Error(`Image too small for ${item.slug}: ${bytes.length} bytes`)
-    const ext = type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg'
+    const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg'
     const file = path.join(outputDir, `${item.slug}.${ext}`)
     await fs.writeFile(file, bytes)
-    prepared.push({ ...item, imageUrl, file, contentType: type, size: bytes.length })
-    console.log(`Downloaded ${item.slug}: ${bytes.length} bytes`)
-    await sleep(500)
+    report.push({
+      slug: item.slug,
+      digikalaProductId: String(item.digikalaProductId),
+      productTitle: product.title_fa || product.title || item.query,
+      productUrl: `https://www.digikala.com/product/dkp-${item.digikalaProductId}/`,
+      imageUrl: images[0],
+      galleryImageCount: images.length,
+      file: path.relative(root, file),
+      contentType,
+      size: bytes.length
+    })
+    console.log(`Downloaded ${item.slug} (${bytes.length} bytes)`)
+    await delay(700)
   }
-  const report = path.join(root, 'assets/digikala-image-download-report.json')
-  await fs.writeFile(report, JSON.stringify(prepared.map(({ file, ...item }) => ({ ...item, file: path.relative(root, file) })), null, 2) + '\n')
-  console.log(`Downloaded ${prepared.length} images. Review files in ${outputDir}; nothing uploaded and database untouched.`)
+  const reportPath = path.join(root, 'assets/digikala-image-download-report.json')
+  await fs.writeFile(reportPath, JSON.stringify(report, null, 2) + '\n')
+  console.log(`Downloaded ${report.length} images. Review the files and report. MinIO and PostgreSQL were not changed.`)
 }
 
 async function importImages(items) {
   const selected = items.filter(item => item.digikalaProductId)
-  if (selected.length !== items.length) throw new Error('Every manifest entry must have a reviewed digikalaProductId before import.')
+  if (!selected.length || selected.length !== items.length) {
+    throw new Error('Every manifest entry must have a reviewed digikalaProductId before import.')
+  }
   const files = []
   for (const item of selected) {
-    const matches = (await fs.readdir(outputDir)).filter(name => name.startsWith(`${item.slug}.`))
-    if (matches.length !== 1) throw new Error(`Expected exactly one downloaded image for ${item.slug}; found ${matches.length}`)
-    const file = path.join(outputDir, matches[0])
+    const names = (await fs.readdir(outputDir)).filter(name => name.startsWith(`${item.slug}.`))
+    if (names.length !== 1) throw new Error(`Expected one downloaded image for ${item.slug}; found ${names.length}`)
+    const file = path.join(outputDir, names[0])
     files.push({ ...item, file, bytes: await fs.readFile(file) })
   }
-
   if (!apply) {
-    console.log(`DRY RUN: ${files.length} images ready. No MinIO or PostgreSQL changes. Re-run with --apply to upload and update DB.`)
+    console.log(`DRY RUN: ${files.length} files validated. No MinIO or DB changes. Use --apply only after reviewing the images.`)
     return
   }
 
@@ -150,21 +176,23 @@ async function importImages(items) {
   const bucket = required('S3_BUCKET')
   const pool = new pg.Pool({ connectionString: required('DATABASE_URL') })
   try {
-    if (!await minio.bucketExists(bucket)) throw new Error(`Bucket "${bucket}" does not exist`)
+    if (!await minio.bucketExists(bucket)) throw new Error(`MinIO bucket "${bucket}" does not exist`)
     const { rows } = await pool.query('SELECT id, slug FROM products WHERE slug = ANY($1::text[])', [selected.map(x => x.slug)])
     const ids = new Map(rows.map(row => [row.slug, row.id]))
     const missing = selected.filter(x => !ids.has(x.slug)).map(x => x.slug)
-    if (missing.length) throw new Error(`Products missing in DB; nothing uploaded: ${missing.join(', ')}`)
+    if (missing.length) throw new Error(`Products missing in DB; no uploads performed: ${missing.join(', ')}`)
 
     const uploaded = []
     for (const item of files) {
       const id = ids.get(item.slug)
       const ext = path.extname(item.file).slice(1)
       const key = `products/${id}/main.${ext}`
-      const type = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
-      await minio.putObject(bucket, key, item.bytes, item.bytes.length, { 'Content-Type': type, 'Cache-Control': 'public, max-age=86400' })
+      const contentType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
+      await minio.putObject(bucket, key, item.bytes, item.bytes.length, {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=86400'
+      })
       uploaded.push({ id, slug: item.slug, key })
-      console.log(`Uploaded ${item.slug} -> ${key}`)
     }
 
     const db = await pool.connect()
@@ -184,7 +212,7 @@ async function importImages(items) {
     } finally {
       db.release()
     }
-    console.log(`Updated ${uploaded.length} products in bucket ${bucket}.`)
+    console.log(`Imported ${uploaded.length} product images into ${bucket} and updated DB references.`)
   } finally {
     await pool.end()
   }
