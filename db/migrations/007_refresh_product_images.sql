@@ -53,14 +53,4 @@ SET url = up.image
 FROM updated_products up
 WHERE pi.product_id = up.id;
 
--- Also create a primary gallery image for any mapped product missing one.
-INSERT INTO product_images(product_id, url, sort_order)
-SELECT p.id, p.image, 0
-FROM products p
-JOIN image_map m ON m.slug = p.slug
-WHERE NOT EXISTS (
-  SELECT 1 FROM product_images pi
-  WHERE pi.product_id = p.id AND pi.sort_order = 0
-);
-
 COMMIT;
