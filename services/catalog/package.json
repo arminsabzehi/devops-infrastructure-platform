@@ -3,6 +3,16 @@
   "private": true,
   "version": "1.5.0",
   "type": "module",
-  "scripts": {"start": "node src/server.js"},
-  "dependencies": {"express": "latest", "minio": "8.0.7", "multer": "^2.0.2", "pg": "latest"}
+  "scripts": {
+    "start": "node src/server.js",
+    "images:discover": "node scripts/digikala-minio-images.js discover",
+    "images:download": "node scripts/digikala-minio-images.js download",
+    "images:import": "node scripts/digikala-minio-images.js import"
+  },
+  "dependencies": {
+    "express": "latest",
+    "minio": "8.0.7",
+    "multer": "^2.0.2",
+    "pg": "latest"
+  }
 }
